@@ -213,5 +213,25 @@
   };
 })();
 
-  window.diaryAPI = { load, save, exportFile, importFile };
-})();
+// Compatibilidad con renderer.js
+async function loadHabits() {
+  try {
+    return JSON.parse(localStorage.getItem("mi-diario-habits")) || [];
+  } catch (error) {
+    console.error("Error cargando hábitos:", error);
+    return [];
+  }
+}
+
+async function saveHabits(habits) {
+  localStorage.setItem("mi-diario-habits", JSON.stringify(habits));
+}
+
+window.diaryAPI = {
+  load: cargar,
+  save: guardar,
+  loadHabits,
+  saveHabits,
+  exportFile: exportarArchivo,
+  importFile: importarArchivo
+};
