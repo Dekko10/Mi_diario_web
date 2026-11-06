@@ -328,13 +328,28 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 @media (max-width: 700px) {
-  .habits-panel {
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .main-area {
     width: 100%;
+    min-width: 0;
+  }
+
+  .habits-panel {
+    display: block;
+    width: 100%;
+    min-width: 0;
     min-height: 0;
+    box-sizing: border-box;
     border-left: 0;
     border-top: 1px solid var(--line);
     padding: 24px 18px;
+    order: 3;
   }
+}
 
   .habits-list {
     display: grid;
