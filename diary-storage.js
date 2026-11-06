@@ -1,5 +1,6 @@
 
 /* Almacenamiento privado de Mi Diario Web */
+
 (() => {
   const DB_NAME = "mi-diario-local";
   const DB_VERSION = 2;
@@ -38,12 +39,15 @@
       request.onsuccess = () => {
         const value = request.result;
 
-        resolve(value && Array.isArray(value.pages)
-          ? value
-          : { version: 1, pages: [] });
+        resolve(
+          value && Array.isArray(value.pages)
+            ? value
+            : { version: 1, pages: [] }
+        );
       };
 
       request.onerror = () => reject(request.error);
+
       tx.oncomplete = () => db.close();
       tx.onerror = () => {
         db.close();
@@ -95,13 +99,14 @@
 
     return new Promise((resolve, reject) => {
       const tx = db.transaction(HABITS_STORE, "readonly");
-      const request = tx.objectStore(HABITS_STORE).get("principal");
+      const request = tx.objectStore(HABITS_STORE).get(RECORD_KEY);
 
       request.onsuccess = () => {
         resolve(Array.isArray(request.result) ? request.result : []);
       };
 
       request.onerror = () => reject(request.error);
+
       tx.oncomplete = () => db.close();
       tx.onerror = () => {
         db.close();
@@ -111,11 +116,15 @@
   }
 
   async function saveHabits(habits) {
+    if (!Array.isArray(habits)) {
+      throw new Error("Formato de hábitos no válido.");
+    }
+
     const db = await openDatabase();
 
     return new Promise((resolve, reject) => {
       const tx = db.transaction(HABITS_STORE, "readwrite");
-      tx.objectStore(HABITS_STORE).put(habits, "principal");
+      tx.objectStore(HABITS_STORE).put(habits, RECORD_KEY);
 
       tx.oncomplete = () => {
         db.close();
@@ -162,7 +171,9 @@
   }
 
   async function importFile(file) {
-    if (!file) throw new Error("No seleccionaste ningún archivo.");
+    if (!file) {
+      throw new Error("No seleccionaste ningún archivo.");
+    }
 
     const parsed = JSON.parse(await file.text());
 
@@ -184,10 +195,14 @@
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("./service-worker.js")
-        .catch(error => console.warn("Error al activar modo sin conexión:", error));
+        .catch(error => console.warn(
+          "Error al activar modo sin conexión:",
+          error
+        ));
     });
   }
 
+  // Registrar todas las funciones en una sola asignación.
   window.diaryAPI = {
     load,
     save,
@@ -197,7 +212,6 @@
     importFile
   };
 })();
-
 
   window.diaryAPI = { load, save, exportFile, importFile };
 })();
