@@ -33,7 +33,18 @@ let draggedPageId = null;
 let pendingHighlight = "";
 
 function makePage() {
-  
+  return {
+    id: `pagina-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
+    date: new Date().toISOString(),
+    title: "",
+    content: ""
+  };
+}
+
+// =========================
+// SISTEMA DE HÁBITOS
+// =========================
+
 function localDateString(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -96,12 +107,10 @@ function renderHabits() {
     card.appendChild(header);
 
     const completed = new Set(habit.completed || []);
-    const count = completed.size;
 
     const progress = document.createElement("div");
     progress.className = "habit-progress";
-    progress.textContent = `${count} de ${habit.duration} días completados`;
-
+    progress.textContent = `${completed.size} de ${habit.duration} días completados`;
     card.appendChild(progress);
 
     const dots = document.createElement("div");
@@ -119,8 +128,6 @@ function renderHabits() {
       dot.title = `Día ${i + 1}: ${date}`;
       dot.setAttribute("aria-label", `Día ${i + 1}, ${isCompleted ? "completado" : "pendiente"}`);
       dot.setAttribute("aria-pressed", String(isCompleted));
-
-      // No se pueden marcar días futuros.
       dot.disabled = date > today;
 
       dot.addEventListener("click", async () => {
@@ -149,9 +156,7 @@ function renderHabits() {
 document.getElementById("addHabitButton").addEventListener("click", () => {
   habitForm.hidden = !habitForm.hidden;
 
-  if (!habitForm.hidden) {
-    habitName.focus();
-  }
+  if (!habitForm.hidden) habitName.focus();
 });
 
 document.getElementById("cancelHabit").addEventListener("click", () => {
@@ -187,13 +192,6 @@ habitForm.addEventListener("submit", async event => {
   habitDuration.value = 30;
   habitForm.hidden = true;
 });
-
-  return {
-    id: `pagina-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
-    date: new Date().toISOString(), title: "", content: ""
-  };
-}
-
 function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -615,14 +613,14 @@ document.getElementById("deletePage").addEventListener("click", async () => {
 document.getElementById("exportDiary").addEventListener("click", async () => {
   await saveDiary();
   const backup = {
-  version: 2,
-  pages: diary.pages,
-  habits
-};
+    version: 2,
+    pages: diary.pages,
+    habits
+  };
 
-const blob = new Blob([JSON.stringify(backup, null, 2)], {
-  type: "application/json"
-});
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {
+    type: "application/json"
+  });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -651,11 +649,12 @@ importFile.addEventListener("change", async () => {
         date: page.date || new Date().toISOString(),
         title: page.title || "",
         content: page.content || ""
+
       }))
+    };
     habits = Array.isArray(imported.habits) ? imported.habits : [];
-await window.diaryAPI.saveHabits(habits);
-renderHabits();
-  };
+    await window.diaryAPI.saveHabits(habits);
+    renderHabits();
     if (!diary.pages.length) diary.pages.push(makePage());
     currentIndex = 0;
     tagFilter.value = "";
@@ -682,7 +681,7 @@ window.addEventListener("keydown", event => {
   try {
     diary = await window.diaryAPI.load();
     habits = await window.diaryAPI.loadHabits();
-renderHabits();
+    renderHabits();
     if (!diary || !Array.isArray(diary.pages) || diary.pages.length === 0) diary = { version: 1, pages: [makePage()] };
     diary.pages = diary.pages.map(page => ({
       id: page.id || makePage().id,
