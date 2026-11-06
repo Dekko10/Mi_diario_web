@@ -356,3 +356,36 @@ button { -webkit-tap-highlight-color: transparent; }
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
 }
+/* Corrección de hábitos en móviles */
+@media (max-width: 700px) {
+  .app-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  .sidebar,
+  .main-area,
+  .habits-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  .habits-panel {
+    display: block !important;
+    flex: 0 0 auto !important;
+    order: 3;
+    position: relative !important;
+    visibility: visible !important;
+    min-height: 150px;
+    padding: 24px 18px !important;
+    background: var(--paper, #f6f5f2);
+    z-index: 10;
+  }
+
+  .habits-list {
+    display: block !important;
+  }
+}
