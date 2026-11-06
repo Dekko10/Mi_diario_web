@@ -13,6 +13,12 @@ const tagFilter = document.getElementById("tagFilter");
 const searchInput = document.getElementById("searchInput");
 const clearSearchButton = document.getElementById("clearSearch");
 const searchSummary = document.getElementById("searchSummary");
+const habitsList = document.getElementById("habitsList");
+const habitForm = document.getElementById("habitForm");
+const habitName = document.getElementById("habitName");
+const habitDuration = document.getElementById("habitDuration");
+
+let habits = [];
 
 const TAGS = {
   YO: "yo", OBS: "obs", IDEA: "idea", CONSEJO: "consejo", ANALISI: "analisi",
@@ -27,6 +33,161 @@ let draggedPageId = null;
 let pendingHighlight = "";
 
 function makePage() {
+  
+function localDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function habitDate(startDate, offset) {
+  const date = new Date(`${startDate}T12:00:00`);
+  date.setDate(date.getDate() + offset);
+  return localDateString(date);
+}
+
+async function persistHabits() {
+  try {
+    await window.diaryAPI.saveHabits(habits);
+  } catch (error) {
+    console.error("Error guardando hábitos:", error);
+    alert("No se pudieron guardar los hábitos.");
+  }
+}
+
+function renderHabits() {
+  habitsList.innerHTML = "";
+
+  if (!habits.length) {
+    const empty = document.createElement("div");
+    empty.className = "habits-empty";
+    empty.textContent = "Todavía no tienes hábitos. Pulsa + para crear el primero.";
+    habitsList.appendChild(empty);
+    return;
+  }
+
+  habits.forEach(habit => {
+    const card = document.createElement("section");
+    card.className = "habit-card";
+
+    const header = document.createElement("div");
+    header.className = "habit-card-header";
+
+    const name = document.createElement("div");
+    name.className = "habit-name";
+    name.textContent = habit.name;
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "habit-delete";
+    deleteButton.textContent = "×";
+    deleteButton.title = "Eliminar hábito";
+
+    deleteButton.addEventListener("click", async () => {
+      if (!confirm(`¿Eliminar el hábito "${habit.name}" y su progreso?`)) return;
+
+      habits = habits.filter(item => item.id !== habit.id);
+      await persistHabits();
+      renderHabits();
+    });
+
+    header.append(name, deleteButton);
+    card.appendChild(header);
+
+    const completed = new Set(habit.completed || []);
+    const count = completed.size;
+
+    const progress = document.createElement("div");
+    progress.className = "habit-progress";
+    progress.textContent = `${count} de ${habit.duration} días completados`;
+
+    card.appendChild(progress);
+
+    const dots = document.createElement("div");
+    dots.className = "habit-dots";
+
+    const today = localDateString();
+
+    for (let i = 0; i < habit.duration; i++) {
+      const date = habitDate(habit.startDate, i);
+      const isCompleted = completed.has(date);
+
+      const dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = `habit-day${isCompleted ? " completed" : ""}`;
+      dot.title = `Día ${i + 1}: ${date}`;
+      dot.setAttribute("aria-label", `Día ${i + 1}, ${isCompleted ? "completado" : "pendiente"}`);
+      dot.setAttribute("aria-pressed", String(isCompleted));
+
+      // No se pueden marcar días futuros.
+      dot.disabled = date > today;
+
+      dot.addEventListener("click", async () => {
+        const current = new Set(habit.completed || []);
+
+        if (current.has(date)) {
+          current.delete(date);
+        } else {
+          current.add(date);
+        }
+
+        habit.completed = [...current].sort();
+        await persistHabits();
+        renderHabits();
+      });
+
+      dots.appendChild(dot);
+    }
+
+    card.appendChild(dots);
+    habitsList.appendChild(card);
+  });
+}
+
+// Mostrar y ocultar el formulario.
+document.getElementById("addHabitButton").addEventListener("click", () => {
+  habitForm.hidden = !habitForm.hidden;
+
+  if (!habitForm.hidden) {
+    habitName.focus();
+  }
+});
+
+document.getElementById("cancelHabit").addEventListener("click", () => {
+  habitForm.reset();
+  habitDuration.value = 30;
+  habitForm.hidden = true;
+});
+
+// Crear un hábito.
+habitForm.addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const name = habitName.value.trim();
+  const duration = Number(habitDuration.value);
+
+  if (!name || !Number.isInteger(duration) || duration < 1 || duration > 365) {
+    alert("Escribe un nombre y una duración entre 1 y 365 días.");
+    return;
+  }
+
+  habits.push({
+    id: `habito-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
+    name,
+    duration,
+    startDate: localDateString(),
+    completed: []
+  });
+
+  await persistHabits();
+  renderHabits();
+
+  habitForm.reset();
+  habitDuration.value = 30;
+  habitForm.hidden = true;
+});
+
   return {
     id: `pagina-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
     date: new Date().toISOString(), title: "", content: ""
@@ -453,7 +614,15 @@ document.getElementById("deletePage").addEventListener("click", async () => {
 // Exportar una copia JSON del diario actual.
 document.getElementById("exportDiary").addEventListener("click", async () => {
   await saveDiary();
-  const blob = new Blob([JSON.stringify(diary, null, 2)], { type: "application/json" });
+  const backup = {
+  version: 2,
+  pages: diary.pages,
+  habits
+};
+
+const blob = new Blob([JSON.stringify(backup, null, 2)], {
+  type: "application/json"
+});
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -483,7 +652,10 @@ importFile.addEventListener("change", async () => {
         title: page.title || "",
         content: page.content || ""
       }))
-    };
+    habits = Array.isArray(imported.habits) ? imported.habits : [];
+await window.diaryAPI.saveHabits(habits);
+renderHabits();
+  };
     if (!diary.pages.length) diary.pages.push(makePage());
     currentIndex = 0;
     tagFilter.value = "";
@@ -509,6 +681,8 @@ window.addEventListener("keydown", event => {
 (async function init() {
   try {
     diary = await window.diaryAPI.load();
+    habits = await window.diaryAPI.loadHabits();
+renderHabits();
     if (!diary || !Array.isArray(diary.pages) || diary.pages.length === 0) diary = { version: 1, pages: [makePage()] };
     diary.pages = diary.pages.map(page => ({
       id: page.id || makePage().id,
