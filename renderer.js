@@ -695,7 +695,7 @@ const lastPageIndex = diary.pages.findIndex(
   page => page.id === lastPageId
 );
 
-showPage(lastPageIndex !== -1 ? lastPageIndex : 0);;
+showPage(lastPageIndex !== -1 ? lastPageIndex : 0);
   } catch (error) {
     console.error(error);
     diary = { version: 1, pages: [makePage()] };
