@@ -1,4 +1,4 @@
-const CACHE_NAME = "mi-diario-web-v1";
+const CACHE_NAME = "mi-diario-web-v2";
 const APP_FILES = [
   "./",
   "./index.html",
