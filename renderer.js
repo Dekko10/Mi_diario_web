@@ -320,7 +320,7 @@ function renderSavedContent(content) {
 
 function showPage(index, highlight = "") {
   if (index < 0 || index >= diary.pages.length) return;
-  currentIndex = index;
+  currentIndex = index;     localStorage.setItem("diaryLastPageId",    diary.pages[index].id);
   const page = diary.pages[index];
   pageTitle.value = page.title || "";
   renderSavedContent(page.content || "");
