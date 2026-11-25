@@ -690,7 +690,12 @@ window.addEventListener("keydown", event => {
       title: page.title || "",
       content: page.content || ""
     }));
-    showPage(0);
+    const lastPageId = localStorage.getItem("diaryLastPageId");
+const lastPageIndex = diary.pages.findIndex(
+  page => page.id === lastPageId
+);
+
+showPage(lastPageIndex !== -1 ? lastPageIndex : 0);;
   } catch (error) {
     console.error(error);
     diary = { version: 1, pages: [makePage()] };
